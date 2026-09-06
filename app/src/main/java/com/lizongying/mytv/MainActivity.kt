@@ -1,6 +1,9 @@
 package com.lizongying.mytv
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Build
@@ -15,6 +18,8 @@ import android.view.View
 import android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.lizongying.mytv.models.TVViewModel
@@ -22,6 +27,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class MainActivity : FragmentActivity(), Request.RequestListener {
@@ -34,6 +40,13 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
     private var timeFragment = TimeFragment()
     private val settingFragment = SettingFragment()
     private val errorFragment = ErrorFragment()
+    private val channelListFragment = ChannelListFragment()
+
+    private var controlServer: ControlServer? = null
+
+    private val audioManager by lazy {
+        getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
 
     private var doubleBackToExitPressedOnce = false
 
@@ -71,6 +84,7 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
                 .add(R.id.main_browse_fragment, timeFragment)
                 .add(R.id.main_browse_fragment, infoFragment)
                 .add(R.id.main_browse_fragment, channelFragment)
+                .add(R.id.main_browse_fragment, channelListFragment)
                 .add(R.id.main_browse_fragment, mainFragment)
                 .hide(mainFragment)
                 .commit()
@@ -102,6 +116,133 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
             ready++
         }
 
+        requestStoragePermission()
+
+        startControlServer()
+
+    }
+
+    private fun startControlServer() {
+        try {
+            controlServer = ControlServer(this, 9958)
+            controlServer?.start(5000, true)
+            Log.i(TAG, "control server started on 9958")
+        } catch (e: Exception) {
+            Log.e(TAG, "control server start error", e)
+        }
+    }
+
+    //region 手机控制接口（ControlServer 调用，写入操作已在服务端切到主线程）
+
+    fun controlPlay(position: Int) {
+        play(position)
+    }
+
+    fun controlPrevChannel() {
+        if (SP.channelReversal) {
+            next()
+        } else {
+            prev()
+        }
+    }
+
+    fun controlNextChannel() {
+        if (SP.channelReversal) {
+            prev()
+        } else {
+            next()
+        }
+    }
+
+    fun controlShowSetting() {
+        showSetting()
+    }
+
+    fun controlOk() {
+        switchMainFragment()
+    }
+
+    fun controlBack() {
+        back()
+    }
+
+    fun currentChannelPosition(): Int {
+        return mainFragment.tvListViewModel.itemPosition.value ?: 0
+    }
+
+    fun currentChannelTitle(): String? {
+        return mainFragment.tvListViewModel.getTVViewModelCurrent()?.getTV()?.title
+    }
+
+    fun currentChannelGroup(): String? {
+        return mainFragment.tvListViewModel.getTVViewModelCurrent()?.getTV()?.channel
+    }
+
+    fun forEachChannel(block: (group: String, title: String) -> Unit) {
+        mainFragment.tvListViewModel.tvListViewModel.value?.forEach {
+            block(it.getTV().channel, it.getTV().title)
+        }
+    }
+
+    fun currentVolumePercent(): Int {
+        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        if (max == 0) {
+            return 0
+        }
+        return audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / max
+    }
+
+    fun controlSetVolume(percent: Int) {
+        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, percent * max / 100, 0)
+    }
+
+    /**
+     * 手机设置了新的源地址：从远程拉取并换源（设置页地址优先，其次默认源链）。
+     */
+    fun reloadSourceFromNetwork() {
+        lifecycleScope.launch {
+            val source = withContext(Dispatchers.IO) { ChannelSource.refreshRemote(this@MainActivity) }
+            if (source != null) {
+                Toast.makeText(this@MainActivity, "直播源已更新", Toast.LENGTH_SHORT).show()
+                mainFragment.applySource(source)
+            } else {
+                Toast.makeText(this@MainActivity, "直播源拉取失败，请检查地址", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    /**
+     * 手机推送了源内容：保存后重新加载并换源。
+     */
+    fun savePushedSource(content: String) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) { ChannelSource.savePushContent(this@MainActivity, content) }
+            val source = withContext(Dispatchers.IO) { ChannelSource.loadFresh(this@MainActivity) }
+            if (source != null) {
+                Toast.makeText(this@MainActivity, "已应用推送的直播源", Toast.LENGTH_SHORT).show()
+                mainFragment.applySource(source)
+            } else {
+                Toast.makeText(this@MainActivity, "推送的直播源解析失败", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    //endregion
+
+    private fun requestStoragePermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
+            || Build.VERSION.SDK_INT > 32
+            || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            1
+        )
     }
 
     fun showInfoFragment(tvViewModel: TVViewModel) {
@@ -151,16 +292,22 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
     }
 
     fun switchMainFragment() {
-        val transaction = supportFragmentManager.beginTransaction()
-
-        if (mainFragment.isHidden) {
-            transaction.show(mainFragment)
-            mainActive()
+        if (channelListFragment.isVisible) {
+            hideChannelList()
         } else {
-            transaction.hide(mainFragment)
+            showChannelList()
         }
+    }
 
-        transaction.commit()
+    private fun showChannelList() {
+        channelListFragment.show()
+        mainActive()
+    }
+
+    fun hideChannelList() {
+        if (channelListFragment.isVisible) {
+            channelListFragment.hide()
+        }
     }
 
     fun mainActive() {
@@ -187,6 +334,7 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
         if (!mainFragment.isHidden) {
             supportFragmentManager.beginTransaction().hide(mainFragment).commit()
         }
+        hideChannelList()
     }
 
     private fun mainFragmentIsHidden(): Boolean {
@@ -334,8 +482,8 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
     }
 
     private fun back() {
-        if (!mainFragmentIsHidden()) {
-            hideMainFragment()
+        if (channelListFragment.isVisible) {
+            hideChannelList()
             return
         }
 
@@ -465,14 +613,14 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
             }
 
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (!mainFragment.isVisible && !settingFragment.isVisible) {
+                if (!channelListFragment.isVisible && !settingFragment.isVisible) {
                     switchMainFragment()
                     return true
                 }
             }
 
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (!mainFragment.isVisible && !settingFragment.isVisible) {
+                if (!channelListFragment.isVisible && !settingFragment.isVisible) {
                     showSetting()
                     return true
                 }
@@ -505,6 +653,8 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        controlServer?.stop()
+        controlServer = null
         Request.onDestroy()
     }
 

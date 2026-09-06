@@ -1,58 +1,33 @@
 # 我的电视
 
-电视直播软件，安装即可使用
+电视直播软件，支持自定义视频源（M3U/TXT），可配合手机遥控使用。
 
-## 使用
+> 本仓库为社区自维护 fork。原版内置的央视频取流接口已失效（返回 401），本 fork 重做了直播源链路：**仓库本身不包含、不预置任何直播源**，频道内容请自行获取并通过设置页/本地文件/手机推送配置。
 
-1. 下载
-    * [github](https://github.com/lizongying/my-tv/releases/)
-    * [gitee](https://gitee.com/lizongying/my-tv/releases/)
-2. 安裝
-    * U盘安装
-    * 小米电视可以使用小米电视助手进行安装
-    * 如电视可以启用ADB，也可以通过ADB进行安装
+## 直播源配置
+
+支持 M3U 和 TXT 两种格式：
+
+```text
+# M3U 格式
+#EXTINF:-1 tvg-logo="logo地址" group-title="央视",CCTV1
+http://example.com/cctv1.m3u8
+
+# TXT 格式
+央视,#genre#
+CCTV1,http://example.com/cctv1.m3u8
+```
+
+配置方式（按优先级依次尝试，任一成功即生效）：
+
+1. **设置页配置地址**：打开设置（按菜单键），在「直播源地址」填入 m3u/txt 的 URL，点「保存并刷新直播源」；也可用手机控制页远程设置
+2. **本地文件**：将直播源文件命名为 `my-tv.txt` 或 `my-tv.m3u`，放到以下任一位置
+    * `/sdcard/my-tv.txt`
+    * `/sdcard/Download/my-tv.txt`
+    * U盘根目录
+    * 应用私有目录（无需存储权限）：`/sdcard/Android/data/com.lizongying.mytv/files/my-tv.txt`
        ```shell
-       adb install my-tv.apk
+       adb push my-tv.txt /sdcard/Android/data/com.lizongying.mytv/files/
        ```
-
-![image](./screenshots/img_3.png)
-![image](./screenshots/img_2.png)
-![image](./screenshots/img_1.png)
-
-## 更新日志
-
-[更新日志](./HISTORY.md)
-
-## TODO
-
-* 音量不同
-* 大湾区卫视、广东4k超高清、广东珠江、三沙卫视
-* CHC高清三个电影频道
-* 地方频道
-* 收藏夹
-* 海外
-* 隐藏频道
-* 亮度调节
-* 音量调节
-* 軟解
-* 自動更新
-
-無法自啟的設備：
-斐讯N1盒子，[Phicomm] Phicomm p230 (Android 7.1.2)
-
-閃退：
-中国移动盒子(新魔百和M302A) 4.4.2
-
-## 版权说明
-
-[LICENSE](./LICENSE)
-
-本项目仅供学习研究，禁止用于商业用途，请于下载二十四小时内删除。
-
-本项目可能随时终止，请大家谨慎使用，建议使用官方渠道进行观看。
-
-本项目使用的部分代码、图片、文字等资源来源于网络，如有侵权，请联系删除。
-
-## 赞赏
-
-![image](./screenshots/appreciate.jpeg)
+3. **手机推送**：设置页扫码打开手机控制页，把源内容直接粘贴推送给电视（电视访问不了源地址时用）
+4. **缓存回退**：任一来源曾成功加载过，断网时会使用上次的缓存

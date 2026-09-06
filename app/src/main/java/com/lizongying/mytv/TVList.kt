@@ -3,9 +3,7 @@ package com.lizongying.mytv
 import com.lizongying.mytv.models.ProgramType
 
 object TVList {
-    val list: Map<String, List<TV>> by lazy {
-        setup()
-    }
+    var list: Map<String, List<TV>> = setup()
 
     private fun setup(): Map<String, List<TV>> {
         var list = mapOf(

@@ -34,6 +34,9 @@ class PlayerFragment : Fragment(), SurfaceHolder.Callback {
     private lateinit var surfaceHolder: SurfaceHolder
     private var exoPlayer: SimpleExoPlayer? = null
 
+    // 播放出错时的静默重试计数（自定义源死链较多，重试不应打断用户浏览列表）
+    private var errorRetryTimes = 0
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -80,12 +83,26 @@ class PlayerFragment : Fragment(), SurfaceHolder.Callback {
                         super.onPlayerError(error)
 
                         Log.e(TAG, "PlaybackException $error")
-                        tvViewModel?.changed()
+                        val vm = tvViewModel
+                        if (vm != null && vm.getTV().pid.isEmpty()) {
+                            // 自定义直播源：静默重试同一路流，不触发列表选台联动
+                            if (errorRetryTimes < 3) {
+                                errorRetryTimes++
+                                playerView?.player?.run {
+                                    setMediaItem(MediaItem.fromUri(vm.getVideoUrlCurrent()))
+                                    prepare()
+                                    play()
+                                }
+                            }
+                        } else {
+                            vm?.changed()
+                        }
                     }
 
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         super.onIsPlayingChanged(isPlaying)
                         if (isPlaying) {
+                            errorRetryTimes = 0
                             (activity as MainActivity).isPlaying()
                         }
                     }
@@ -99,6 +116,7 @@ class PlayerFragment : Fragment(), SurfaceHolder.Callback {
     @OptIn(UnstableApi::class)
     fun play(tvViewModel: TVViewModel) {
         this.tvViewModel = tvViewModel
+        errorRetryTimes = 0
         playerView?.player?.run {
             setMediaItem(MediaItem.fromUri(tvViewModel.getVideoUrlCurrent()))
             prepare()

@@ -32,10 +32,13 @@ class CardPresenter(
         cardView.tag = tvViewModel.videoUrl.value
 
         cardView.mainImageView?.let {
-            Glide.with(viewHolder.view.context)
-                .load(tvViewModel.getTV().logo)
-                .centerInside()
-                .into(it)
+            val logo = tvViewModel.getTV().logo
+            if (logo is String && logo.isNotEmpty()) {
+                Glide.with(viewHolder.view.context)
+                    .load(logo)
+                    .centerInside()
+                    .into(it)
+            }
         }
 
         cardView.setBackgroundColor(Color.WHITE)

@@ -4,60 +4,132 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     >
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+    <ScrollView
+        android:layout_width="380dp"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        >
         <LinearLayout
-            android:layout_width="300dp"
-            android:layout_height="match_parent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="20dp"
-            android:paddingLeft="7dp"
-            android:paddingRight="7dp"
+            android:padding="16dp"
             android:background="#FF263238"
             >
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/app_name"
-                android:textSize="16sp" />
+                android:textSize="18sp"
+                android:textStyle="bold" />
             <TextView
                 android:id="@+id/version"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="当前版本: $versionName\n获取最新: https://github.com/lizongying/my-tv/releases/"
-                />
+                android:layout_marginTop="4dp"
+                android:textColor="#FF9AA0A6"
+                android:textSize="12sp" />
             <LinearLayout
-                android:layout_width="300dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:orientation="horizontal"
+                android:gravity="center_vertical"
                 >
                 <Button
                     android:id="@+id/check_version"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="10dp"
                     android:text="@string/check_version"
-                    />
-                <ProgressBar
-                    android:visibility="gone"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    />
+                    android:textSize="12sp" />
                 <TextView
                     android:id="@+id/version_name"
-                    android:text=""
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text=""
+                    android:textSize="12sp" />
             </LinearLayout>
-            <Button
-                android:id="@+id/exit"
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="8dp"
+                android:background="#33FFFFFF" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="10dp"
-                android:text="@string/exit"
-                />
+                android:text="@string/section_remote"
+                android:textColor="#FF4FC3F7"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                >
+                <ImageView
+                    android:id="@+id/qrcode"
+                    android:layout_width="110dp"
+                    android:layout_height="110dp" />
+                <TextView
+                    android:id="@+id/control_url"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:textColor="#FF9AA0A6"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="8dp"
+                android:background="#33FFFFFF" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/section_source"
+                android:textColor="#FF4FC3F7"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+            <EditText
+                android:id="@+id/source_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:hint="@string/source_url_hint"
+                android:inputType="textUri"
+                android:textSize="12sp" />
+            <Button
+                android:id="@+id/save_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/save_source"
+                android:textSize="12sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="8dp"
+                android:background="#33FFFFFF" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/section_general"
+                android:textColor="#FF4FC3F7"
+                android:textSize="14sp"
+                android:textStyle="bold" />
             <Switch
                 android:id="@+id/switch_channel_reversal"
                 android:text="@string/title_channel_reversal"
@@ -82,11 +154,20 @@
                 android:layout_marginTop="5dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="8dp"
+                android:background="#33FFFFFF" />
+
+            <Button
+                android:id="@+id/exit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/exit"
+                android:textSize="12sp" />
         </LinearLayout>
-        <ImageView
-            android:layout_width="300dp"
-            android:layout_height="wrap_content"
-            android:src="@drawable/appreciate"
-            android:background="@color/white" />
-    </LinearLayout>
+    </ScrollView>
 </FrameLayout>

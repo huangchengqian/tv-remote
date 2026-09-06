@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    >
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/group_list"
+        android:layout_width="190dp"
+        android:layout_height="match_parent"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp"
+        android:background="#E614181D"
+        android:scrollbars="none" />
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/channel_list"
+        android:layout_width="360dp"
+        android:layout_height="match_parent"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp"
+        android:background="#D8101418"
+        android:scrollbars="none" />
+</LinearLayout>

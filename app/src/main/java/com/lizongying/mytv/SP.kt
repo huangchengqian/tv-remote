@@ -26,6 +26,9 @@ object SP {
     // guid
     private const val KEY_GUID = "guid"
 
+    // custom live source url
+    private const val KEY_SOURCE_URL = "source_url"
+
     private lateinit var sp: SharedPreferences
 
     /**
@@ -62,4 +65,8 @@ object SP {
     var guid: String
         get() = sp.getString(KEY_GUID, "") ?: ""
         set(value) = sp.edit().putString(KEY_GUID, value).apply()
+
+    var sourceUrl: String
+        get() = sp.getString(KEY_SOURCE_URL, "") ?: ""
+        set(value) = sp.edit().putString(KEY_SOURCE_URL, value).apply()
 }

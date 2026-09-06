@@ -24,6 +24,7 @@ import com.lizongying.mytv.models.TVListViewModel
 import com.lizongying.mytv.models.TVViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainFragment : BrowseSupportFragment() {
 
@@ -34,6 +35,8 @@ class MainFragment : BrowseSupportFragment() {
     var tvListViewModel = TVListViewModel()
 
     private var lastVideoUrl = ""
+
+    private var firstLoad = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.i(TAG, "onCreate")
@@ -74,10 +77,97 @@ class MainFragment : BrowseSupportFragment() {
 
         activity?.let { YSP.init(it) }
 
+        lifecycleScope.launch {
+            var sourceOrigin: ChannelSource.SourceOrigin? = null
+            context?.let { ctx ->
+                val result = withContext(Dispatchers.IO) { ChannelSource.loadCacheFirst(ctx) }
+                if (result != null) {
+                    TVList.list = result.channels
+                    sourceOrigin = result.origin
+                    Log.i(TAG, "source loaded, origin=${result.origin}, groups=${result.channels.size}")
+                } else {
+                    Log.i(TAG, "no custom source, use built-in list")
+                }
+            }
+
+            loadRows()
+
+            setupEventListeners()
+
+            registerObservers()
+
+            (activity as MainActivity).fragmentReady("MainFragment")
+
+            // 后台静默刷新远程源：内容有变化时无缝换源，保留当前频道
+            if (sourceOrigin != ChannelSource.SourceOrigin.LOCAL) {
+                context?.let { ctx ->
+                    val refreshed = withContext(Dispatchers.IO) { ChannelSource.refreshRemote(ctx) }
+                    if (refreshed != null
+                        && ChannelSource.channelsKey(refreshed) != ChannelSource.channelsKey(TVList.list)
+                    ) {
+                        Log.i(TAG, "source updated in background")
+                        Toast.makeText(context, "直播源已更新", Toast.LENGTH_SHORT).show()
+                        rebuildRows(refreshed)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 用新的源内容重建频道列表，保留当前频道。必须在主线程调用。
+     */
+    fun applySource(source: Map<String, List<TV>>) {
+        view?.post {
+            rebuildRows(source)
+        }
+    }
+
+    private fun rebuildRows(source: Map<String, List<TV>>) {
+        val current = tvListViewModel.getTVViewModel(itemPosition)?.getTV()
+        TVList.list = source
+        tvListViewModel = TVListViewModel()
+        adapter = null
         loadRows()
-
         setupEventListeners()
+        registerObservers()
 
+        // 保持用户当前所在位置不跳动：
+        // 1) 原序号对应的频道（分组+名称）一致时直接保持
+        // 2) 否则按分组+名称查找
+        // 3) 都没有则保持原序号
+        // 不调用 changed()：不打断当前播放，也不拉走列表焦点
+        var target = itemPosition
+        val list = tvListViewModel.tvListViewModel.value
+        if (current != null && list != null) {
+            if (list.getOrNull(itemPosition)
+                    ?.let { it.getTV().title == current.title && it.getTV().channel == current.channel }
+                != true
+            ) {
+                val found = list.indexOfFirst {
+                    it.getTV().title == current.title && it.getTV().channel == current.channel
+                }
+                if (found >= 0) {
+                    target = found
+                }
+            }
+        }
+        if (target in 0 until tvListViewModel.size()) {
+            itemPosition = target
+            tvListViewModel.setItemPosition(itemPosition)
+            setSelectedPosition(itemPosition, false)
+        }
+
+        // 当前播放中的频道若在新源里地址变了，静默换流（不动列表）
+        val newViewModel = tvListViewModel.getTVViewModel(itemPosition)
+        val oldUrl = current?.videoUrl?.firstOrNull()
+        val newUrl = newViewModel?.getTV()?.videoUrl?.firstOrNull()
+        if (newViewModel != null && oldUrl != null && oldUrl != newUrl) {
+            (activity as? MainActivity)?.play(newViewModel)
+        }
+    }
+
+    private fun registerObservers() {
         tvListViewModel.tvListViewModel.value?.forEach { tvViewModel ->
             tvViewModel.errInfo.observe(viewLifecycleOwner) { _ ->
                 if (tvViewModel.errInfo.value != null
@@ -124,8 +214,6 @@ class MainFragment : BrowseSupportFragment() {
                 }
             }
         }
-
-        (activity as MainActivity).fragmentReady("MainFragment")
     }
 
     fun toLastPosition() {
@@ -168,7 +256,11 @@ class MainFragment : BrowseSupportFragment() {
 
         adapter = rowsAdapter
 
-        itemPosition = SP.itemPosition
+        // 仅首次加载读取持久化的位置；换源重建时保持内存中的当前位置
+        if (firstLoad) {
+            itemPosition = SP.itemPosition
+            firstLoad = false
+        }
         if (itemPosition >= tvListViewModel.size()) {
             itemPosition = 0
         }
@@ -310,6 +402,10 @@ class MainFragment : BrowseSupportFragment() {
 
             ProgramType.F -> {
                 Request.fetchFEPG(tvViewModel)
+            }
+
+            ProgramType.NONE -> {
+                // 自定义直播源，无节目单
             }
         }
     }

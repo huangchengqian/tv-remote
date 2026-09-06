@@ -37,7 +37,7 @@ class SettingFragment : DialogFragment() {
         val context = requireContext() // It‘s safe to get context here.
         _binding = SettingBinding.inflate(inflater, container, false)
         binding.versionName.text = "当前版本: v${context.appVersionName}"
-        binding.version.text = "https://github.com/lizongying/my-tv"
+        binding.version.text = "https://github.com/huangchengqian/my-tv"
 
         binding.switchChannelReversal.run {
             isChecked = SP.channelReversal
@@ -71,6 +71,17 @@ class SettingFragment : DialogFragment() {
             }
         }
 
+        binding.sourceUrl.setText(SP.sourceUrl)
+        binding.saveSource.setOnClickListener {
+            (activity as MainActivity).settingDelayHide()
+            SP.sourceUrl = binding.sourceUrl.text.toString().trim()
+            android.widget.Toast.makeText(
+                context, "已保存，正在刷新频道", android.widget.Toast.LENGTH_SHORT
+            ).show()
+            dismiss()
+            requireActivity().recreate()
+        }
+
         updateManager = UpdateManager(context, this, context.appVersionCode)
         binding.checkVersion.setOnClickListener(
             OnClickListenerCheckVersion(
@@ -79,11 +90,47 @@ class SettingFragment : DialogFragment() {
             )
         )
 
+        showControlQrcode()
+
         binding.exit.setOnClickListener{
             requireActivity().finishAffinity()
         }
 
         return binding.root
+    }
+
+    /**
+     * 显示手机控制页地址二维码，手机扫码即可遥控电视。
+     */
+    private fun showControlQrcode() {
+        val ip = Utils.getLocalIpAddress()
+        if (ip == null) {
+            binding.controlUrl.text = "手机控制：未连接网络"
+            return
+        }
+        val url = "http://$ip:9958"
+        binding.controlUrl.text = "手机控制（同一WiFi）：$url"
+        try {
+            val size = 320
+            val matrix = com.google.zxing.qrcode.QRCodeWriter().encode(
+                url, com.google.zxing.BarcodeFormat.QR_CODE, size, size
+            )
+            val bitmap = android.graphics.Bitmap.createBitmap(
+                size, size, android.graphics.Bitmap.Config.RGB_565
+            )
+            for (x in 0 until size) {
+                for (y in 0 until size) {
+                    bitmap.setPixel(
+                        x, y,
+                        if (matrix.get(x, y)) android.graphics.Color.BLACK
+                        else android.graphics.Color.WHITE
+                    )
+                }
+            }
+            binding.qrcode.setImageBitmap(bitmap)
+        } catch (e: Exception) {
+            binding.qrcode.visibility = View.GONE
+        }
     }
 
     fun setVersionName(versionName: String) {

@@ -3,12 +3,29 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// 本地配置：source.local.properties（不推 GitHub），格式：
+//   SOURCE_URLS=url1,url2,...   预置直播源地址，多个逗号分隔
+// 文件不存在时 APP_BUILD_SOURCE_URLS 为空，即纯播放器（用户自行配置源）
+def readLocalSourceUrls = { ->
+    def file = rootProject.file("source.local.properties")
+    if (!file.exists()) {
+        return ""
+    }
+    def props = new Properties()
+    file.withInputStream { props.load(it) }
+    return (props.getProperty("SOURCE_URLS") ?: "").trim()
+}
+
 android {
     namespace 'com.lizongying.mytv'
     compileSdk 34
 
     viewBinding {
         enabled = true
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     defaultConfig {
@@ -18,13 +35,16 @@ android {
         versionCode VersionCode()
         versionName VersionName()
 
+        // 预置直播源（逗号分隔），仅本地构建携带；空串表示不预置
+        buildConfigField "String", "PRESET_SOURCE_URLS", "\"${readLocalSourceUrls()}\""
+
         // This block is different from the one you use to link Gradle
         // to your CMake or ndk-build script.
         externalNativeBuild {
 
             // For ndk-build, instead use the ndkBuild block.
             cmake {
-                arguments "-DIS_SO_BUILD=${project.hasProperty('IS_SO_BUILD') ? project.IS_SO_BUILD : true}"
+                arguments "-DIS_SO_BUILD=${project.hasProperty('IS_SO_BUILD') ? project.IS_SO_BUILD : false}"
 
                 abiFilters "armeabi-v7a", "arm64-v8a"
             }
@@ -126,4 +146,8 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.13.3'
     implementation 'com.google.android.exoplayer:exoplayer-core:2.13.3'
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.13.3'
+
+    // 手机控制：内嵌 HTTP 服务 + 二维码
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+    implementation 'com.google.zxing:core:3.5.2'
 }

@@ -15,3 +15,9 @@
 .cxx
 local.properties
 /path/
+
+# 打包产物
+/my-tv-*.apk
+
+# 本地构建配置（含预置直播源，不入库）
+/source.local.properties

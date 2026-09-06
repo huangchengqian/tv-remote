@@ -1,0 +1,7 @@
+# 复制为 source.local.properties 后填写（该文件已被 .gitignore 排除，不会推到 GitHub）
+#
+# SOURCE_URLS：预置直播源地址（m3u/txt），多个用逗号分隔
+# 留空或不创建此文件时，构建出的 App 为纯播放器，由用户自行配置源
+#
+# 示例：
+SOURCE_URLS=https://your-source-url.example/live/iptv.m3u8,https://backup-url.example/iptv.txt

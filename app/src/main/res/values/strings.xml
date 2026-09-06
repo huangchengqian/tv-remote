@@ -7,4 +7,9 @@
     <string name="dismiss_error">好的</string>
     <string name="title_time">显示时间</string>
     <string name="exit">退出</string>
+    <string name="section_remote">手机控制</string>
+    <string name="section_source">直播源</string>
+    <string name="section_general">通用</string>
+    <string name="source_url_hint">自定义直播源地址，留空用默认源</string>
+    <string name="save_source">保存并刷新直播源</string>
 </resources>
