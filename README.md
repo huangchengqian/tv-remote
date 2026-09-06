@@ -1,4 +1,4 @@
-# 我的电视
+# TV遥控 (tv-remote)
 
 为电视盒子打造的直播播放器：支持自定义视频源（M3U/TXT）、手机扫码遥控、缓存秒开、换源不打断播放。
 
@@ -48,7 +48,7 @@ CCTV1,http://example.com/cctv1.m3u8
 
 ## 下载
 
-前往 [Releases](https://github.com/huangchengqian/my-tv/releases) 下载 APK，U盘或 `adb install` 安装。
+前往 [Releases](https://github.com/huangchengqian/tv-remote/releases) 下载 APK，U盘或 `adb install` 安装。
 
 ## 构建
 

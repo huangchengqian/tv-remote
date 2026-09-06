@@ -199,7 +199,7 @@ class ControlServer(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>我的电视 · 遥控</title>
+<title>TV遥控 · 遥控</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #14181d; color: #e8eaed; font-family: -apple-system, sans-serif;
@@ -239,7 +239,7 @@ class ControlServer(
 </style>
 </head>
 <body>
-<h1>我的电视 · 遥控</h1>
+<h1>TV遥控 · 遥控</h1>
 <div class="current"><div class="name" id="curName">加载中…</div>
   <div class="group" id="curGroup"></div></div>
 <div class="pad">
@@ -259,7 +259,7 @@ class ControlServer(
   <textarea id="srcContent" placeholder="或直接粘贴 m3u / txt 源内容"></textarea>
   <div class="row"><button onclick="pushContent()">推送源内容</button></div>
 </div>
-<div class="tip">电视与手机需在同一局域网 · 我看电视 MY-TV</div>
+<div class="tip">电视与手机需在同一局域网 · TV Remote</div>
 <script>
 let channels = [];
 let openGroups = new Set();
