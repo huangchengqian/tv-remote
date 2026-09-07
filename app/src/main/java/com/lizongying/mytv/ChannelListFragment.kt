@@ -2,6 +2,8 @@ package com.lizongying.mytv
 
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -29,6 +31,29 @@ class ChannelListFragment : Fragment() {
     private lateinit var groupAdapter: GroupAdapter
     private lateinit var channelAdapter: ChannelAdapter
 
+    private val handler = Handler(Looper.getMainLooper())
+
+    // 打开列表后焦点落位重试：真机布局慢，一次 requestFocus 常常落空
+    private val focusRunnable = object : Runnable {
+        override fun run() {
+            if (!isAdded || view == null || view?.visibility != View.VISIBLE) {
+                return
+            }
+            if (groupView.hasFocus() || channelView.hasFocus()) {
+                return
+            }
+            val index = groups.getOrNull(selectedGroup)?.positions?.indexOf(currentPosition) ?: -1
+            val lm = channelView.layoutManager as? LinearLayoutManager
+            if (index >= 0 && lm != null && channelView.height > 0) {
+                lm.scrollToPositionWithOffset(index, channelView.height / 3)
+            }
+            channelView.requestFocus()
+            if (!channelView.hasFocus()) {
+                handler.postDelayed(this, 100)
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -50,18 +75,53 @@ class ChannelListFragment : Fragment() {
     fun show() {
         rebuild()
         view?.visibility = View.VISIBLE
-        channelView.post {
-            val index = groups.getOrNull(selectedGroup)?.positions?.indexOf(currentPosition) ?: -1
-            if (index >= 0) {
-                (channelView.layoutManager as? LinearLayoutManager)
-                    ?.scrollToPositionWithOffset(index, channelView.height / 3)
-            }
-            channelView.requestFocus()
-        }
+        handler.removeCallbacks(focusRunnable)
+        handler.postDelayed(focusRunnable, 50)
+    }
+
+    fun ensureFocus() {
+        focusRunnable.run()
     }
 
     fun hide() {
+        handler.removeCallbacks(focusRunnable)
         view?.visibility = View.GONE
+    }
+
+    /**
+     * 列表可见但焦点未落在列表项上时（真机上常见），由 Activity 把方向键转交到这里，
+     * 保证不会误触直接换台。
+     */
+    fun handleDpad(keyCode: Int) {
+        val inGroups = groupView.hasFocus()
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                if (!inGroups) {
+                    groupView.requestFocus()
+                    if (!groupView.hasFocus()) {
+                        groupView.post { groupView.requestFocus() }
+                    }
+                }
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (inGroups) {
+                    channelView.requestFocus()
+                }
+            }
+
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                val rv = if (inGroups) groupView else channelView
+                val focused = rv.focusedChild
+                if (focused == null) {
+                    focusRunnable.run()
+                    return
+                }
+                val direction =
+                    if (keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
+                focused.focusSearch(direction)?.requestFocus()
+            }
+        }
     }
 
     private fun rebuild() {

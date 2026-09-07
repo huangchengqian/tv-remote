@@ -334,7 +334,7 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
         if (!mainFragment.isHidden) {
             supportFragmentManager.beginTransaction().hide(mainFragment).commit()
         }
-        hideChannelList()
+        // 频道列表不自动隐藏，由用户按返回/OK 自行关闭
     }
 
     private fun mainFragmentIsHidden(): Boolean {
@@ -589,38 +589,74 @@ class MainActivity : FragmentActivity(), Request.RequestListener {
             }
 
             KeyEvent.KEYCODE_ENTER -> {
-                switchMainFragment()
+                if (channelListFragment.isVisible) {
+                    channelListFragment.ensureFocus()
+                } else {
+                    switchMainFragment()
+                }
             }
 
             KeyEvent.KEYCODE_DPAD_CENTER -> {
-                switchMainFragment()
+                if (channelListFragment.isVisible) {
+                    channelListFragment.ensureFocus()
+                } else {
+                    switchMainFragment()
+                }
             }
 
             KeyEvent.KEYCODE_DPAD_UP -> {
-                channelUp()
+                if (channelListFragment.isVisible) {
+                    channelListFragment.handleDpad(KeyEvent.KEYCODE_DPAD_UP)
+                } else {
+                    channelUp()
+                }
+                return true
             }
 
             KeyEvent.KEYCODE_CHANNEL_UP -> {
-                channelUp()
+                if (channelListFragment.isVisible) {
+                    channelListFragment.handleDpad(KeyEvent.KEYCODE_DPAD_UP)
+                } else {
+                    channelUp()
+                }
+                return true
             }
 
             KeyEvent.KEYCODE_DPAD_DOWN -> {
-                channelDown()
+                if (channelListFragment.isVisible) {
+                    channelListFragment.handleDpad(KeyEvent.KEYCODE_DPAD_DOWN)
+                } else {
+                    channelDown()
+                }
+                return true
             }
 
             KeyEvent.KEYCODE_CHANNEL_DOWN -> {
-                channelDown()
+                if (channelListFragment.isVisible) {
+                    channelListFragment.handleDpad(KeyEvent.KEYCODE_DPAD_DOWN)
+                } else {
+                    channelDown()
+                }
+                return true
             }
 
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (!channelListFragment.isVisible && !settingFragment.isVisible) {
+                if (channelListFragment.isVisible) {
+                    channelListFragment.handleDpad(KeyEvent.KEYCODE_DPAD_LEFT)
+                    return true
+                }
+                if (!settingFragment.isVisible) {
                     switchMainFragment()
                     return true
                 }
             }
 
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (!channelListFragment.isVisible && !settingFragment.isVisible) {
+                if (channelListFragment.isVisible) {
+                    channelListFragment.handleDpad(KeyEvent.KEYCODE_DPAD_RIGHT)
+                    return true
+                }
+                if (!settingFragment.isVisible) {
                     showSetting()
                     return true
                 }
