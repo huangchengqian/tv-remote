@@ -64,6 +64,9 @@ class ChannelListFragment : Fragment() {
         channelView = view.findViewById(R.id.channel_list)
         groupView.layoutManager = LinearLayoutManager(context)
         channelView.layoutManager = LinearLayoutManager(context)
+        // 变更动画会把持有焦点的条目移除重建，导致焦点丢失（TV 上表现为导航错乱），直接禁用
+        groupView.itemAnimator = null
+        channelView.itemAnimator = null
         groupAdapter = GroupAdapter()
         channelAdapter = ChannelAdapter()
         groupView.adapter = groupAdapter
@@ -111,16 +114,37 @@ class ChannelListFragment : Fragment() {
             }
 
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                val rv = if (inGroups) groupView else channelView
-                val focused = rv.focusedChild
-                if (focused == null) {
-                    focusRunnable.run()
-                    return
+                val up = keyCode == KeyEvent.KEYCODE_DPAD_UP
+                when {
+                    inGroups -> moveFocus(groupView, up)
+                    channelView.hasFocus() -> moveFocus(channelView, up)
+                    else -> focusRunnable.run()
                 }
-                val direction =
-                    if (keyCode == KeyEvent.KEYCODE_DPAD_UP) View.FOCUS_UP else View.FOCUS_DOWN
-                focused.focusSearch(direction)?.requestFocus()
             }
+        }
+    }
+
+    /**
+     * 在列表内部循环移动焦点（到顶回到底部），不会跳出当前列。
+     */
+    private fun moveFocus(rv: RecyclerView, up: Boolean) {
+        val lm = rv.layoutManager as? LinearLayoutManager ?: return
+        val count = rv.adapter?.itemCount ?: 0
+        if (count == 0) {
+            return
+        }
+        val current = rv.focusedChild?.let { lm.getPosition(it) } ?: -1
+        val target = when {
+            current < 0 -> 0
+            up -> if (current == 0) count - 1 else current - 1
+            else -> if (current == count - 1) 0 else current + 1
+        }
+        val view = lm.findViewByPosition(target)
+        if (view != null) {
+            view.requestFocus()
+        } else {
+            rv.scrollToPosition(target)
+            rv.post { lm.findViewByPosition(target)?.requestFocus() }
         }
     }
 
