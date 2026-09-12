@@ -7,6 +7,7 @@ import android.util.Log
 import fi.iki.elonen.NanoHTTPD
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * 手机控制服务：手机与电视处于同一局域网时，浏览器访问 http://电视IP:9958 即可遥控。
@@ -34,6 +35,7 @@ class ControlServer(
                     "/", "/index.html" -> serveIndex()
                     "/status" -> newJsonResponse(statusJson())
                     "/channels" -> newJsonResponse(channelsJson())
+                    "/crash" -> newJsonResponse(crashJson())
                     else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "not found")
                 }
 
@@ -42,6 +44,7 @@ class ControlServer(
                     "/command" -> handleCommand(session)
                     "/volume" -> handleVolume(session)
                     "/source" -> handleSource(session)
+                    "/crash" -> handleCrashClear(session)
                     else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "not found")
                 }
 
@@ -181,6 +184,18 @@ class ControlServer(
         }
     }
 
+    private fun crashJson(): JSONObject {
+        val obj = JSONObject()
+        val file = File(activity.filesDir, MyApplication.CRASH_FILE)
+        obj.put("crash", if (file.isFile) file.readText() else JSONObject.NULL)
+        return obj
+    }
+
+    private fun handleCrashClear(session: IHTTPSession): Response {
+        File(activity.filesDir, MyApplication.CRASH_FILE).delete()
+        return newOkResponse("crash log cleared")
+    }
+
     private fun serveIndex(): Response {
         return newFixedLengthResponse(
             Response.Status.OK, "text/html; charset=utf-8", INDEX_HTML
@@ -258,6 +273,12 @@ class ControlServer(
   <div class="row"><button onclick="pushUrl()">设置地址</button></div>
   <textarea id="srcContent" placeholder="或直接粘贴 m3u / txt 源内容"></textarea>
   <div class="row"><button onclick="pushContent()">推送源内容</button></div>
+</div>
+<div class="src" id="crashBox" style="display:none; border-color:#B00020;">
+  <h3 style="color:#FF7B72;">⚠ 电视端崩溃日志（请截图反馈）</h3>
+  <pre id="crashLog" style="white-space:pre-wrap; font-size:11px; color:#FF7B72;
+    max-height:200px; overflow:auto; margin-bottom:8px;"></pre>
+  <div class="row"><button onclick="clearCrash()">清除崩溃日志</button></div>
 </div>
 <div class="tip">电视与手机需在同一局域网 · TV Remote</div>
 <script>
@@ -345,6 +366,20 @@ async function pushContent() {
   const r = await jpost('/source', {content});
   alert((await r.json()).message || '已推送');
 }
+async function checkCrash() {
+  try {
+    const d = await (await fetch('/crash')).json();
+    if (d.crash) {
+      document.getElementById('crashLog').textContent = d.crash;
+      document.getElementById('crashBox').style.display = '';
+    }
+  } catch (e) {}
+}
+async function clearCrash() {
+  await jpost('/crash', {clear: true});
+  document.getElementById('crashBox').style.display = 'none';
+}
+checkCrash();
 refresh();
 setInterval(refresh, 5000);
 </script>
