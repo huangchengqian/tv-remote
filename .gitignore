@@ -22,3 +22,4 @@ local.properties
 
 # 本地构建配置（含预置直播源，不入库）
 /source.local.properties
+.workbuddy/
